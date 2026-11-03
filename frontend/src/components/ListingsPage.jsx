@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { fetchProperties } from "../api/client";
 import PropertyCard from "./PropertyCard";
+import PropertyFilters from "./PropertyFilters";
 
 export default function ListingsPage() {
   const [properties, setProperties] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [cityInput, setCityInput] = useState("");
-  const [city, setCity] = useState("");
+  const [filters, setFilters] = useState({});
 
   useEffect(() => {
     let cancelled = false;
@@ -16,31 +16,52 @@ export default function ListingsPage() {
     async function loadProperties() {
       setLoading(true);
       setError("");
+      setProperties([]);
 
       try {
-        const params = { limit: 20, offset: 0 };
-        if (city) params.city = city;
+        const params = {
+          limit: 20,
+          offset: 0,
+          ...filters,
+        };
 
-        const data = await fetchProperties(params);
+        const cleanParams = Object.fromEntries(
+          Object.entries(params).filter(
+            ([key, value]) =>
+              key === "limit" || key === "offset" || value !== ""
+          )
+        );
+
+        const data = await fetchProperties(cleanParams);
 
         if (!cancelled) {
           setProperties(Array.isArray(data.results) ? data.results : []);
           setTotal(Number(data.total) || 0);
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || "Unable to load properties.");
+        if (!cancelled) {
+          setError(err.message || "Unable to load properties.");
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadProperties();
-    return () => { cancelled = true; };
-  }, [city]);
 
-  function handleSearch(event) {
-    event.preventDefault();
-    setCity(cityInput.trim());
+    return () => {
+      cancelled = true;
+    };
+  }, [filters]);
+
+  function handleSearch(activeFilters) {
+    setFilters(activeFilters);
+  }
+
+  function handleClear() {
+    setFilters({});
   }
 
   return (
@@ -53,31 +74,23 @@ export default function ListingsPage() {
         </p>
       </header>
 
-      <form onSubmit={handleSearch} className="search-form">
-        <input
-          aria-label="Search by city"
-          placeholder="Enter a city, e.g. Blythe"
-          value={cityInput}
-          onChange={(event) => setCityInput(event.target.value)}
-        />
-        <button type="submit">Search</button>
-        <button
-          type="button"
-          onClick={() => {
-            setCityInput("");
-            setCity("");
-          }}
-        >
-          Clear
-        </button>
-      </form>
+      <PropertyFilters
+        onSearch={handleSearch}
+        onClear={handleClear}
+      />
 
-      {loading && <p className="status-message" role="status">Loading properties…</p>}
+      {loading && (
+        <p className="status-message" role="status">
+          Loading properties...
+        </p>
+      )}
 
       {!loading && error && (
         <div className="error-message" role="alert">
           <p>{error}</p>
-          <button onClick={() => window.location.reload()}>Try again</button>
+          <button onClick={() => handleSearch(filters)}>
+            Try again
+          </button>
         </div>
       )}
 
@@ -86,8 +99,9 @@ export default function ListingsPage() {
           <p className="property-count">
             Showing {properties.length} of {total.toLocaleString()} properties
           </p>
+
           {properties.length === 0 ? (
-            <p>No properties found.</p>
+            <p>No properties found. Try adjusting your filters.</p>
           ) : (
             <section className="property-grid" aria-label="Property listings">
               {properties.map((property, index) => (

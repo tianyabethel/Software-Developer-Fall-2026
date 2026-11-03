@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { fetchProperties } from "../api/client";
 import PropertyCard from "./PropertyCard";
 import PropertyFilters from "./PropertyFilters";
+import Pagination from "./Pagination";
+
+const ITEMS_PER_PAGE = 20;
 
 export default function ListingsPage() {
   const [properties, setProperties] = useState([]);
@@ -9,6 +12,9 @@ export default function ListingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   useEffect(() => {
     let cancelled = false;
@@ -20,8 +26,8 @@ export default function ListingsPage() {
 
       try {
         const params = {
-          limit: 20,
-          offset: 0,
+          limit: ITEMS_PER_PAGE,
+          offset: (currentPage - 1) * ITEMS_PER_PAGE,
           ...filters,
         };
 
@@ -54,15 +60,27 @@ export default function ListingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [filters]);
+  }, [filters, currentPage]);
 
   function handleSearch(activeFilters) {
+    setCurrentPage(1);
     setFilters(activeFilters);
   }
 
   function handleClear() {
+    setCurrentPage(1);
     setFilters({});
   }
+
+  function handlePageChange(page) {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+
+    setCurrentPage(page);
+    window.scrollTo(0, 0);
+  }
+
+  const startItem = total === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endItem = Math.min(currentPage * ITEMS_PER_PAGE, total);
 
   return (
     <main className="listings-page">
@@ -88,7 +106,7 @@ export default function ListingsPage() {
       {!loading && error && (
         <div className="error-message" role="alert">
           <p>{error}</p>
-          <button onClick={() => handleSearch(filters)}>
+          <button onClick={() => setCurrentPage((page) => page)}>
             Try again
           </button>
         </div>
@@ -97,20 +115,28 @@ export default function ListingsPage() {
       {!loading && !error && (
         <>
           <p className="property-count">
-            Showing {properties.length} of {total.toLocaleString()} properties
+            Showing {startItem}-{endItem} of {total.toLocaleString()} properties
           </p>
 
           {properties.length === 0 ? (
             <p>No properties found. Try adjusting your filters.</p>
           ) : (
-            <section className="property-grid" aria-label="Property listings">
-              {properties.map((property, index) => (
-                <PropertyCard
-                  key={property.L_ListingID || property.id || index}
-                  property={property}
-                />
-              ))}
-            </section>
+            <>
+              <section className="property-grid" aria-label="Property listings">
+                {properties.map((property, index) => (
+                  <PropertyCard
+                    key={property.L_ListingID || property.id || index}
+                    property={property}
+                  />
+                ))}
+              </section>
+
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </>
           )}
         </>
       )}

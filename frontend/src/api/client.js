@@ -40,3 +40,10 @@ export async function fetchPropertyDetail(id) {
 
   return request(`/api/properties/${encodeURIComponent(id)}`);
 }
+
+export async function fetchOpenHouses(id) {
+  if (!id) {
+    throw new Error("A property listing ID is required.");
+  }
+  return request(`/api/properties/${encodeURIComponent(id)}/openhouses`);
+}

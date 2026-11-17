@@ -6,7 +6,7 @@ import Pagination from "./Pagination";
 
 const ITEMS_PER_PAGE = 20;
 
-export default function ListingsPage() {
+export default function ListingsPage({ onSelectProperty }) {
   const [properties, setProperties] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -127,6 +127,7 @@ export default function ListingsPage() {
                   <PropertyCard
                     key={property.L_ListingID || property.id || index}
                     property={property}
+                    onClick={() => onSelectProperty(property.L_ListingID)}
                   />
                 ))}
               </section>

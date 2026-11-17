@@ -23,13 +23,13 @@ function getFirstPhoto(value) {
   }
 }
 
-export default function PropertyCard({ property }) {
+export default function PropertyCard({ property, onClick }) {
   const photo = getFirstPhoto(property.L_Photos);
   const address =
     property.L_Address || property.L_AddressStreet || "Address unavailable";
 
   return (
-    <article className="property-card">
+    <article className="property-card" onClick={onClick} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick?.(); } }}>
       {photo ? (
         <img
           className="property-card__image"
